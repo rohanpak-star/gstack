@@ -15,6 +15,7 @@ const G = {
   played: 0,
   wins: 0,
   alive: true,
+  autoplay: false,
   seed: null,
   rng: null,
 };
@@ -34,6 +35,39 @@ function pickStartSeed() {
   const url = new URL(location.href);
   const fromUrl = seedFromCode(url.searchParams.get('seed') || '');
   return fromUrl || ((Date.now() ^ Math.floor(Math.random() * 0xffffffff)) >>> 0);
+}
+
+// Apply ?d=&era=&blind= from a shared URL so a replayed run gets the same
+// difficulty/era/blind settings as the seed it was generated under.
+function applyUrlConfig() {
+  const url = new URL(location.href);
+  const d = DIFFICULTIES.find(x => x.id === url.searchParams.get('d'));
+  const era = ERAS.find(x => x.id === url.searchParams.get('era'));
+  const blind = url.searchParams.get('blind');
+  if (d) G.difficulty = d;
+  if (era) G.era = era;
+  if (blind !== null) G.blind = blind === '1';
+}
+
+// Drop only ?seed= from the URL (so re-runs don't reuse it) while
+// preserving any other query params.
+function clearSeedParam() {
+  const url = new URL(location.href);
+  if (!url.searchParams.has('seed')) return;
+  url.searchParams.delete('seed');
+  const qs = url.searchParams.toString();
+  history.replaceState(null, '', url.pathname + (qs ? '?' + qs : '') + url.hash);
+}
+
+// Full URL that reproduces this run's spin + schedule + draft conditions.
+function buildShareUrl() {
+  const url = new URL(location.href);
+  url.search = '';
+  url.searchParams.set('seed', seedToCode(G.seed));
+  url.searchParams.set('d', G.difficulty.id);
+  url.searchParams.set('era', G.era.id);
+  url.searchParams.set('blind', G.blind ? '1' : '0');
+  return url.toString();
 }
 
 function showScreen(name) {
@@ -79,9 +113,18 @@ function spin() {
   const pick = options[Math.floor(G.rng() * options.length)];
   G.franchise = pick;
   G.pool = Engine.getPool(pick.id, G.era.start);
+  // Blind draft: shuffle the pool once here (not in renderDraft) so card
+  // order never leaks rating info. Uses its own rng so the spin/schedule
+  // rng stream stays identical between blind and non-blind runs.
+  if (G.blind) {
+    G.pool = Engine.shuffle(G.pool, Engine.mulberry32(G.seed ^ 0xBEEF));
+  }
 
   const wheel = $('spin-wheel');
-  const reel = [...options].sort(() => G.rng() - 0.5);
+  // Cosmetic reel order only — must not consume G.rng or the schedule
+  // built later would diverge between browsers (sort() isn't a uniform
+  // shuffle and its comparator call count isn't portable).
+  const reel = Engine.shuffle(options, Math.random);
   let i = 0;
   wheel.style.background = '';
   const iv = setInterval(() => {
@@ -188,6 +231,7 @@ function startSeason() {
   G.wins = 0;
   G.results = [];
   G.alive = true;
+  G.autoplay = false;
   $('match-log').innerHTML = '';
   updateSeasonHead();
   showScreen('season');
@@ -197,8 +241,8 @@ function updateSeasonHead() {
   const losses = G.played - G.wins;
   $('season-record').textContent = `${G.wins}–${losses} · match ${Math.min(G.played + 1, Engine.TOTAL_MATCHES)} of ${Engine.TOTAL_MATCHES}`;
   const done = !G.alive || G.played >= Engine.TOTAL_MATCHES;
-  $('btn-sim-next').disabled = done;
-  $('btn-sim-all').disabled = done;
+  $('btn-sim-next').disabled = done || G.autoplay;
+  $('btn-sim-all').disabled = done || G.autoplay;
 }
 
 function simNext() {
@@ -232,10 +276,17 @@ function simNext() {
 }
 
 function simAll() {
+  if (G.autoplay) return;
+  G.autoplay = true;
+  updateSeasonHead();
   const tick = () => {
-    if (!G.alive || G.played >= Engine.TOTAL_MATCHES) return;
+    if (!G.alive || G.played >= Engine.TOTAL_MATCHES) {
+      G.autoplay = false;
+      updateSeasonHead();
+      return;
+    }
     simNext();
-    if (G.alive && G.played < Engine.TOTAL_MATCHES) setTimeout(tick, 120);
+    setTimeout(tick, 120);
   };
   tick();
 }
@@ -272,12 +323,13 @@ function buildShareCard() {
   return [
     `16-0 IPL: ${headline} with ${G.franchise.short} (${G.difficulty.label}, ${G.era.label})`,
     ...rows,
-    `seed ${seedToCode(G.seed)} · ipl-16-0`,
+    buildShareUrl(),
   ].join('\n');
 }
 
 // ---------- leaderboard ----------
 const LB_KEY = 'ipl160_leaderboard';
+const DIFF_RANK = { Hard: 2, Normal: 1, Easy: 0 };
 
 function loadLB() {
   try { return JSON.parse(localStorage.getItem(LB_KEY)) || []; }
@@ -295,7 +347,7 @@ function saveRun() {
     rating: G.stats.rating,
     date: new Date().toISOString().slice(0, 10),
   });
-  lb.sort((a, b) => b.wins - a.wins || (a.diff === 'Hard' ? -1 : 1));
+  lb.sort((a, b) => b.wins - a.wins || DIFF_RANK[b.diff] - DIFF_RANK[a.diff] || b.rating - a.rating);
   localStorage.setItem(LB_KEY, JSON.stringify(lb.slice(0, 10)));
   $('btn-save-run').disabled = true;
   $('btn-save-run').textContent = 'Saved ✓';
@@ -320,9 +372,7 @@ $('btn-start').onclick = () => {
   G.seed = pickStartSeed();
   G.rng = Engine.mulberry32(G.seed);
   // seed is consumed for this run only; clear it from the URL so re-runs don't reuse it
-  if (new URL(location.href).searchParams.has('seed')) {
-    history.replaceState(null, '', location.pathname);
-  }
+  clearSeedParam();
   spin();
 };
 $('btn-respin').onclick = () => {
@@ -363,5 +413,6 @@ $('btn-copy-result').onclick = async () => {
   }
 };
 
+applyUrlConfig();
 renderConfig();
 showScreen('config');
