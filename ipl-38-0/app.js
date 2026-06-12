@@ -11,13 +11,30 @@ const G = {
   xi: [],
   stats: null,
   schedule: [],
+  results: [],
   played: 0,
   wins: 0,
   alive: true,
-  rng: Engine.mulberry32(Date.now() & 0xffffffff),
+  seed: null,
+  rng: null,
 };
 
 const $ = id => document.getElementById(id);
+
+function seedFromCode(code) {
+  const n = parseInt(code, 36);
+  return Number.isFinite(n) && n > 0 ? n >>> 0 : null;
+}
+
+function seedToCode(seed) {
+  return seed.toString(36).toUpperCase();
+}
+
+function pickStartSeed() {
+  const url = new URL(location.href);
+  const fromUrl = seedFromCode(url.searchParams.get('seed') || '');
+  return fromUrl || ((Date.now() ^ Math.floor(Math.random() * 0xffffffff)) >>> 0);
+}
 
 function showScreen(name) {
   for (const s of document.querySelectorAll('.screen')) s.classList.add('hidden');
@@ -169,6 +186,7 @@ function startSeason() {
   G.schedule = Engine.buildSchedule(G.franchise.id, G.rng);
   G.played = 0;
   G.wins = 0;
+  G.results = [];
   G.alive = true;
   $('match-log').innerHTML = '';
   updateSeasonHead();
@@ -188,6 +206,7 @@ function simNext() {
   const game = G.schedule[G.played];
   const r = Engine.simMatch(G.stats, game, G.difficulty.mult, G.rng);
   G.played++;
+  G.results.push(r.win);
   if (r.win) G.wins++;
   else G.alive = false;
 
@@ -232,8 +251,28 @@ function endSeason(perfect, killer) {
       $('result-detail').textContent =
         `Undone by ${killer.name} in match ${G.played}. ${G.franchise.name} · ${G.difficulty.label} · ${G.era.label} · team rating ${G.stats.rating}.`;
     }
+    $('result-share').textContent = buildShareCard();
+    $('btn-copy-result').textContent = 'Copy result';
+    $('btn-copy-result').disabled = false;
     showScreen('result');
   }, 700);
+}
+
+// Wordle-style grid: 🟩 win, 🟥 loss, ⬜ not reached (only on a loss).
+// Seed code reproduces the spin + 38-game schedule for this run (not draft
+// picks) — paste it into ?seed= to face the same gauntlet.
+function buildShareCard() {
+  const losses = G.played - G.wins;
+  const squares = G.results.map(w => (w ? '🟩' : '🟥'));
+  while (squares.length < Engine.TOTAL_MATCHES) squares.push('⬜');
+  const rows = [];
+  for (let i = 0; i < squares.length; i += 19) rows.push(squares.slice(i, i + 19).join(''));
+  const headline = G.wins === Engine.TOTAL_MATCHES ? '38-0 — IMMORTAL' : `${G.wins}-${losses}`;
+  return [
+    `38-0 IPL: ${headline} with ${G.franchise.short} (${G.difficulty.label}, ${G.era.label})`,
+    ...rows,
+    `seed ${seedToCode(G.seed)} · ipl-38-0`,
+  ].join('\n');
 }
 
 // ---------- leaderboard ----------
@@ -277,6 +316,12 @@ function renderLeaderboard() {
 $('btn-start').onclick = () => {
   G.respinsLeft = G.difficulty.respins;
   G.xi = [];
+  G.seed = pickStartSeed();
+  G.rng = Engine.mulberry32(G.seed);
+  // seed is consumed for this run only; clear it from the URL so re-runs don't reuse it
+  if (new URL(location.href).searchParams.has('seed')) {
+    history.replaceState(null, '', location.pathname);
+  }
   spin();
 };
 $('btn-respin').onclick = () => {
@@ -301,6 +346,21 @@ $('btn-again').onclick = () => {
   showScreen('config');
 };
 $('btn-save-run').onclick = saveRun;
+$('btn-copy-result').onclick = async () => {
+  const text = $('result-share').textContent;
+  try {
+    await navigator.clipboard.writeText(text);
+    $('btn-copy-result').textContent = 'Copied ✓';
+  } catch {
+    // clipboard API unavailable (e.g. insecure context) — fall back to selection
+    const range = document.createRange();
+    range.selectNodeContents($('result-share'));
+    const sel = window.getSelection();
+    sel.removeAllRanges();
+    sel.addRange(range);
+    $('btn-copy-result').textContent = 'Selected — press Ctrl/Cmd+C';
+  }
+};
 
 renderConfig();
 showScreen('config');
