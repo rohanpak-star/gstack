@@ -34,6 +34,16 @@
     return Math.sqrt(-2 * Math.log(u)) * Math.cos(2 * Math.PI * v);
   }
 
+  // Fisher-Yates, returns a new array. rng() must return [0, 1).
+  function shuffle(arr, rng) {
+    const out = [...arr];
+    for (let i = out.length - 1; i > 0; i--) {
+      const j = Math.floor(rng() * (i + 1));
+      [out[i], out[j]] = [out[j], out[i]];
+    }
+    return out;
+  }
+
   function overall(p) {
     if (p.role === 'BOWL') return p.bowl;
     if (p.role === 'AR') {
@@ -149,11 +159,7 @@
   // boss teams. Drawing your own franchise gives a "ghost" mirror match
   // against its all-time XI.
   function buildSchedule(yourFranchiseId, rng) {
-    const pool = [...FRANCHISES];
-    for (let i = pool.length - 1; i > 0; i--) {
-      const j = Math.floor(rng() * (i + 1));
-      [pool[i], pool[j]] = [pool[j], pool[i]];
-    }
+    const pool = shuffle(FRANCHISES, rng);
     const league = pool.slice(0, LEAGUE_MATCHES).map(t => ({
       opp: t,
       leg: rng() < 0.5 ? 'home' : 'away',
@@ -197,12 +203,13 @@
   }
 
   function potm(xi, result, rng) {
-    // weighted pick: batters more likely after big totals, bowlers after defenses
-    const weights = xi.map(p => Math.max(p.bat, p.bowl) - 40);
-    let total = weights.reduce((s, w) => s + Math.max(w, 1), 0);
+    // weighted pick: batters more likely after big totals, bowlers after low-scoring defenses
+    const battingGame = result.yourScore >= 180;
+    const weights = xi.map(p => Math.max(battingGame ? p.bat : p.bowl, 41) - 40);
+    const total = weights.reduce((s, w) => s + w, 0);
     let r = rng() * total;
     for (let i = 0; i < xi.length; i++) {
-      r -= Math.max(weights[i], 1);
+      r -= weights[i];
       if (r <= 0) return xi[i];
     }
     return xi[0];
@@ -210,7 +217,7 @@
 
   return {
     XI_SIZE, MAX_OVERSEAS, LEAGUE_MATCHES, TOTAL_MATCHES,
-    mulberry32, overall, getPool, autoXI, validateXI, teamStats,
+    mulberry32, shuffle, overall, getPool, autoXI, validateXI, teamStats,
     spinnableFranchises, buildSchedule, simMatch, potm,
   };
 });
