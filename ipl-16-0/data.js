@@ -1,4 +1,4 @@
-// 38-0: IPL perfect season sim — data layer
+// 16-0: IPL perfect season sim — data layer
 // Franchise `strength` is sim difficulty (not a realism claim), tuned so a
 // well-drafted XI rates ~85-91 and most league games are winnable but never free.
 

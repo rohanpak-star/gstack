@@ -1,4 +1,4 @@
-// 38-0 UI controller. All game logic lives in engine.js.
+// 16-0 UI controller. All game logic lives in engine.js.
 /* global Engine, FRANCHISES, BOSS_TEAMS, ERAS, DIFFICULTIES */
 
 const G = {
@@ -214,13 +214,14 @@ function simNext() {
   row.className = 'match-row' + (r.win ? '' : ' loss') + (game.opp.boss ? ' boss' : '');
   const star = Engine.potm(G.xi, r, G.rng);
   const oppName = game.mirror ? `${game.opp.short} All-Time XI 👻` : game.opp.short + (game.opp.boss ? ' ★' : '');
+  const venue = game.opp.boss ? game.stage : `${game.stage} · ${game.leg}`;
   const how = r.superOver
     ? 'super over!'
     : r.win ? `won by ${r.margin} runs` : `lost by ${r.margin} runs`;
   row.innerHTML =
     `<span class="m-num">#${G.played}</span>
      <span class="m-result ${r.win ? 'w' : 'l'}">${r.win ? 'W' : 'L'}</span>
-     <span class="m-opp">${oppName} (${game.leg})</span>
+     <span class="m-opp">${oppName} (${venue})</span>
      <span class="m-score">${r.yourScore}/${r.yourWkts} vs ${r.oppScore}/${r.oppWkts} · ${how}</span>
      <span class="m-potm">${r.win ? '⭐ ' + star.name : ''}</span>`;
   $('match-log').prepend(row);
@@ -243,9 +244,9 @@ function endSeason(perfect, killer) {
   setTimeout(() => {
     const losses = G.played - G.wins;
     if (perfect) {
-      $('result-title').textContent = '🏆 38–0. IMMORTAL.';
+      $('result-title').textContent = '🏆 16–0. IMMORTAL.';
       $('result-detail').textContent =
-        `${G.franchise.name} · ${G.difficulty.label} · ${G.era.label} · team rating ${G.stats.rating}. Every franchise in IPL history, swept home and away.`;
+        `${G.franchise.name} · ${G.difficulty.label} · ${G.era.label} · team rating ${G.stats.rating}. A perfect IPL season — 14 league games, Qualifier 1 and the Final, all won.`;
     } else {
       $('result-title').textContent = `${G.wins}–${losses}`;
       $('result-detail').textContent =
@@ -259,24 +260,24 @@ function endSeason(perfect, killer) {
 }
 
 // Wordle-style grid: 🟩 win, 🟥 loss, ⬜ not reached (only on a loss).
-// Seed code reproduces the spin + 38-game schedule for this run (not draft
+// Seed code reproduces the spin + 16-game schedule for this run (not draft
 // picks) — paste it into ?seed= to face the same gauntlet.
 function buildShareCard() {
   const losses = G.played - G.wins;
   const squares = G.results.map(w => (w ? '🟩' : '🟥'));
   while (squares.length < Engine.TOTAL_MATCHES) squares.push('⬜');
   const rows = [];
-  for (let i = 0; i < squares.length; i += 19) rows.push(squares.slice(i, i + 19).join(''));
-  const headline = G.wins === Engine.TOTAL_MATCHES ? '38-0 — IMMORTAL' : `${G.wins}-${losses}`;
+  for (let i = 0; i < squares.length; i += 8) rows.push(squares.slice(i, i + 8).join(''));
+  const headline = G.wins === Engine.TOTAL_MATCHES ? '16-0 — IMMORTAL' : `${G.wins}-${losses}`;
   return [
-    `38-0 IPL: ${headline} with ${G.franchise.short} (${G.difficulty.label}, ${G.era.label})`,
+    `16-0 IPL: ${headline} with ${G.franchise.short} (${G.difficulty.label}, ${G.era.label})`,
     ...rows,
-    `seed ${seedToCode(G.seed)} · ipl-38-0`,
+    `seed ${seedToCode(G.seed)} · ipl-16-0`,
   ].join('\n');
 }
 
 // ---------- leaderboard ----------
-const LB_KEY = 'ipl380_leaderboard';
+const LB_KEY = 'ipl160_leaderboard';
 
 function loadLB() {
   try { return JSON.parse(localStorage.getItem(LB_KEY)) || []; }

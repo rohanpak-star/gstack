@@ -1,4 +1,4 @@
-// 38-0 game engine: pool building, XI validation, team rating, match sim.
+// 16-0 game engine: pool building, XI validation, team rating, match sim.
 // Pure functions, no DOM — loaded by the browser (globals) and by bun tests (module).
 
 (function (root, factory) {
@@ -14,7 +14,8 @@
 
   const XI_SIZE = 11;
   const MAX_OVERSEAS = 4;
-  const TOTAL_MATCHES = 38; // (17 franchises + 2 boss teams) x home & away
+  const LEAGUE_MATCHES = 14;
+  const TOTAL_MATCHES = 16; // 14-game league season + Qualifier 1 + Final
 
   function mulberry32(seed) {
     let a = seed >>> 0;
@@ -142,40 +143,36 @@
     return FRANCHISES.filter(f => f.to >= eraStart && autoXI(getPool(f.id, eraStart)) !== null);
   }
 
-  // Opponents are always all 19 teams (17 franchises incl. your own all-time
-  // XI, plus 2 boss teams), home & away — the era filter only restricts who
-  // YOU can draft. That's what makes it 38.
+  // 16-match "perfect season": 14 league fixtures drawn from the 17
+  // franchises (3 sit out each run — that's where the replay variety comes
+  // from), each home or away, then Qualifier 1 and the Final against the two
+  // boss teams. Drawing your own franchise gives a "ghost" mirror match
+  // against its all-time XI.
   function buildSchedule(yourFranchiseId, rng) {
-    const teams = [...FRANCHISES, ...BOSS_TEAMS];
-    const games = [];
-    for (const t of teams) {
-      for (const leg of ['home', 'away']) {
-        games.push({
-          opp: t,
-          leg,
-          mirror: t.id === yourFranchiseId,
-        });
-      }
-    }
-    // shuffle
-    for (let i = games.length - 1; i > 0; i--) {
+    const pool = [...FRANCHISES];
+    for (let i = pool.length - 1; i > 0; i--) {
       const j = Math.floor(rng() * (i + 1));
-      [games[i], games[j]] = [games[j], games[i]];
+      [pool[i], pool[j]] = [pool[j], pool[i]];
     }
-    // force a boss game as the finale for drama
-    const lastBoss = games.map((g, i) => ({ g, i })).filter(x => x.g.opp.boss).pop();
-    if (lastBoss && lastBoss.i !== games.length - 1) {
-      const tmp = games[games.length - 1];
-      games[games.length - 1] = lastBoss.g;
-      games[lastBoss.i] = tmp;
-    }
-    return games;
+    const league = pool.slice(0, LEAGUE_MATCHES).map(t => ({
+      opp: t,
+      leg: rng() < 0.5 ? 'home' : 'away',
+      mirror: t.id === yourFranchiseId,
+      stage: 'League',
+    }));
+    const playoffs = BOSS_TEAMS.map((t, i) => ({
+      opp: t,
+      leg: 'neutral',
+      mirror: false,
+      stage: i === 0 ? 'Qualifier 1' : 'Final',
+    }));
+    return [...league, ...playoffs];
   }
 
   function simMatch(stats, game, diffMult, rng) {
-    // -6 is the "it's your story" edge; keeps weak-franchise runs alive without
+    // -2 is the "it's your story" edge; keeps weak-franchise runs alive without
     // making boss games free. Slope 1.2 so one bad day stays survivable.
-    const opp = game.opp.strength * diffMult - 6 + (game.mirror ? 2 : 0);
+    const opp = game.opp.strength * diffMult - 2 + (game.mirror ? 2 : 0);
     const yourScore = Math.round(166 + 1.2 * (stats.bat - opp) + gauss(rng) * 14);
     const oppScore = Math.round(166 + 1.2 * (opp - stats.bowl) + gauss(rng) * 14);
     const you = clamp(yourScore, 60, 280);
@@ -212,7 +209,7 @@
   }
 
   return {
-    XI_SIZE, MAX_OVERSEAS, TOTAL_MATCHES,
+    XI_SIZE, MAX_OVERSEAS, LEAGUE_MATCHES, TOTAL_MATCHES,
     mulberry32, overall, getPool, autoXI, validateXI, teamStats,
     spinnableFranchises, buildSchedule, simMatch, potm,
   };
