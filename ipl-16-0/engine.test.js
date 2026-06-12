@@ -90,6 +90,28 @@ describe('schedule', () => {
     expect(playoffs[1].stage).toBe('Final');
   });
 
+  test('fixed seed reproduces an exact schedule (locks in shuffle determinism for ?seed=)', () => {
+    const sched = Engine.buildSchedule('csk', Engine.mulberry32(42));
+    expect(sched.map(g => [g.opp.id, g.leg, g.stage, g.mirror])).toEqual([
+      ['gl', 'away', 'League', false],
+      ['rcb', 'away', 'League', false],
+      ['csk', 'home', 'League', true],
+      ['dch', 'home', 'League', false],
+      ['lsg', 'away', 'League', false],
+      ['srh', 'home', 'League', false],
+      ['mi', 'away', 'League', false],
+      ['ktk', 'home', 'League', false],
+      ['pwi', 'home', 'League', false],
+      ['dd', 'home', 'League', false],
+      ['gt', 'home', 'League', false],
+      ['rr', 'away', 'League', false],
+      ['kkr', 'away', 'League', false],
+      ['pbks', 'home', 'League', false],
+      ['legends', 'neutral', 'Qualifier 1', false],
+      ['world', 'neutral', 'Final', false],
+    ]);
+  });
+
   test('drawing your own franchise creates a mirror match', () => {
     // try seeds until csk lands in the 14 league fixtures
     for (let seed = 0; seed < 50; seed++) {
