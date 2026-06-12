@@ -1,0 +1,35 @@
+name: Deploy ipl-16-0 to GitHub Pages
+
+on:
+  push:
+    branches:
+      - main
+      - claude/ipl-38-0-sim-wkjzhi
+    paths:
+      - 'ipl-16-0/**'
+      - '.github/workflows/deploy-ipl-16-0.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  pages: write
+  id-token: write
+
+concurrency:
+  group: pages
+  cancel-in-progress: true
+
+jobs:
+  deploy:
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/configure-pages@v5
+      - uses: actions/upload-pages-artifact@v3
+        with:
+          path: ./ipl-16-0
+      - id: deployment
+        uses: actions/deploy-pages@v4
