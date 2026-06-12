@@ -11,7 +11,20 @@ describe('dataset integrity', () => {
     for (const p of PLAYERS) {
       expect(p.teams.length).toBeGreaterThan(0);
       for (const t of p.teams) {
-        expect(franchiseIds.has(t)).toBe(true);
+        expect(franchiseIds.has(t.id)).toBe(true);
+      }
+    }
+  });
+
+  test('player stints are chronological, non-overlapping, and within career span', () => {
+    for (const p of PLAYERS) {
+      for (const t of p.teams) {
+        expect(t.to).toBeGreaterThanOrEqual(t.from);
+        expect(t.from).toBeGreaterThanOrEqual(p.from);
+        expect(t.to).toBeLessThanOrEqual(p.to);
+      }
+      for (let i = 1; i < p.teams.length; i++) {
+        expect(p.teams[i].from).toBeGreaterThan(p.teams[i - 1].to);
       }
     }
   });
@@ -33,11 +46,11 @@ describe('dataset integrity', () => {
     }
   });
 
-  test("player career overlaps each franchise's lifespan", () => {
+  test("player stints overlap each franchise's lifespan", () => {
     for (const p of PLAYERS) {
       for (const t of p.teams) {
-        const f = FRANCHISES.find(x => x.id === t);
-        expect(p.from <= f.to && p.to >= f.from).toBe(true);
+        const f = FRANCHISES.find(x => x.id === t.id);
+        expect(t.from <= f.to && t.to >= f.from).toBe(true);
       }
     }
   });

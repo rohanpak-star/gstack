@@ -56,7 +56,7 @@
 
   function getPool(franchiseId, eraStart) {
     return PLAYERS
-      .filter(p => p.teams.includes(franchiseId) && p.to >= eraStart)
+      .filter(p => p.teams.some(t => t.id === franchiseId && t.to >= eraStart))
       .map(p => ({ ...p, ovr: overall(p) }))
       .sort((a, b) => b.ovr - a.ovr);
   }
