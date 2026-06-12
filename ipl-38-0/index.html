@@ -1,0 +1,110 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>38–0 · The IPL Perfect Season</title>
+  <meta name="description" content="Draft your XI from a random IPL franchise, then face every franchise in IPL history twice. Lose once and it's over.">
+  <link rel="stylesheet" href="styles.css">
+</head>
+<body>
+  <header>
+    <h1 class="logo">38<span>–</span>0</h1>
+    <p class="tagline">Face every franchise in IPL history. Twice. Lose once and it's over.</p>
+  </header>
+
+  <main>
+    <!-- CONFIG -->
+    <section id="screen-config" class="screen">
+      <div class="panel">
+        <h2>Season setup</h2>
+        <div class="opt-group">
+          <label>Difficulty</label>
+          <div class="opt-row" id="opt-difficulty"></div>
+        </div>
+        <div class="opt-group">
+          <label>Draft era</label>
+          <div class="opt-row" id="opt-era"></div>
+        </div>
+        <div class="opt-group">
+          <label>Ratings</label>
+          <div class="opt-row" id="opt-blind"></div>
+        </div>
+        <button class="btn btn-primary" id="btn-start">Spin my franchise</button>
+      </div>
+      <div class="panel" id="leaderboard-panel">
+        <h2>Best runs on this device</h2>
+        <ol id="leaderboard"></ol>
+      </div>
+    </section>
+
+    <!-- SPIN -->
+    <section id="screen-spin" class="screen hidden">
+      <div class="panel center">
+        <h2>Your franchise</h2>
+        <div id="spin-wheel" class="spin-wheel">?</div>
+        <div id="spin-result" class="spin-result"></div>
+        <div class="btn-row">
+          <button class="btn" id="btn-respin"></button>
+          <button class="btn btn-primary" id="btn-to-draft">Draft from this pool</button>
+        </div>
+      </div>
+    </section>
+
+    <!-- DRAFT -->
+    <section id="screen-draft" class="screen hidden">
+      <div class="draft-layout">
+        <div class="panel" id="draft-pool-panel">
+          <h2 id="draft-title"></h2>
+          <p class="hint">Pick 11 · max 4 overseas · at least 1 wicketkeeper</p>
+          <div id="draft-pool" class="card-grid"></div>
+        </div>
+        <div class="panel" id="draft-xi-panel">
+          <h2>Your XI <span id="xi-count"></span></h2>
+          <div id="draft-xi"></div>
+          <div id="xi-stats"></div>
+          <div id="xi-errors" class="errors"></div>
+          <div class="btn-row">
+            <button class="btn" id="btn-autofill">Auto-fill best XI</button>
+            <button class="btn btn-primary" id="btn-lock-xi">Lock XI &amp; start season</button>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- SEASON -->
+    <section id="screen-season" class="screen hidden">
+      <div class="panel">
+        <div class="season-head">
+          <h2 id="season-record"></h2>
+          <div class="btn-row">
+            <button class="btn btn-primary" id="btn-sim-next">Sim next match</button>
+            <button class="btn" id="btn-sim-all">Sim to the end</button>
+          </div>
+        </div>
+        <div id="match-log"></div>
+      </div>
+    </section>
+
+    <!-- RESULT -->
+    <section id="screen-result" class="screen hidden">
+      <div class="panel center">
+        <h2 id="result-title"></h2>
+        <p id="result-detail"></p>
+        <div class="btn-row">
+          <button class="btn" id="btn-save-run">Save run to leaderboard</button>
+          <button class="btn btn-primary" id="btn-again">Run it back</button>
+        </div>
+      </div>
+    </section>
+  </main>
+
+  <footer>
+    <p>Fan-made sim. Squads &amp; ratings are vibes, argue accordingly.</p>
+  </footer>
+
+  <script src="data.js"></script>
+  <script src="engine.js"></script>
+  <script src="app.js"></script>
+</body>
+</html>
